@@ -1,0 +1,36 @@
+# ===== ENTORNO VIRTUAL =====
+entorno/
+venv/
+env/
+.env
+*.cfg
+
+# ===== PYTHON =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ===== DJANGO =====
+db.sqlite3
+*.log
+local_settings.py
+/staticfiles/
+/mediafiles/
+/media/
+
+# ===== VS CODE =====
+.vscode/
+*.code-workspace
+
+# ===== SISTEMA OPERATIVO =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== VARIABLES DE ENTORNO =====
+.env
+.env.local
+.env.*.local
