@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">Encuentra a tu <span style="background: linear-gradient(to right, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">conexión ideal</span></h1>
+    <p class="hero-subtitle">La aplicación que utiliza IA para conectarte con las personas correctas en base a tus intereses, afinidad y compatibilidad profunda.</p>
+    
+    <div id="actionContainer">
+        <!-- Contenido dinámico dependiendo del login -->
+        <a href="{% url 'registro_web' %}" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 3rem;" id="btnHeroRegistro">Crear Cuenta Ahora</a>
+        <br><br>
+        <p style="color: var(--text-muted);">¿Ya tienes cuenta? <a href="{% url 'login_web' %}" style="color: var(--accent); text-decoration: none;">Inicia sesión aquí</a></p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('access_token');
+        const container = document.getElementById('actionContainer');
+        
+        if (token) {
+            container.innerHTML = `
+                <button id="btnEmpezarMatch" class="btn btn-accent" style="font-size: 1.2rem; padding: 1rem 3rem; margin-bottom: 20px;">
+                    ✨ Empezar el Match ✨
+                </button>
+                <div id="matchResult" class="message-box message-success" style="display: none; background: rgba(30, 15, 60, 0.9); border-color: var(--primary); color: white;">
+                </div>
+            `;
+            
+            document.getElementById('btnEmpezarMatch').addEventListener('click', async () => {
+                const resultBox = document.getElementById('matchResult');
+                resultBox.style.display = 'block';
+                resultBox.innerText = 'Buscando compatibilidades...';
+                
+                try {
+                    const response = await fetch('/api/usuarios/empezar-match/', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        resultBox.innerText = "🔮 " + data.message;
+                    } else {
+                        resultBox.className = 'message-box message-error';
+                        resultBox.innerText = "Error: " + (data.detail || "No autorizado o token expirado.");
+                    }
+                } catch (error) {
+                    resultBox.className = 'message-box message-error';
+                    resultBox.innerText = "Error de red al intentar conectar.";
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

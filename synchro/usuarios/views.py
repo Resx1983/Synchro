@@ -2,6 +2,7 @@ from rest_framework import viewsets, generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.views.generic import TemplateView
 from .models import Usuario
 from .serializers import UsuarioSerializer, RegistroUsuarioSerializer
 
@@ -32,4 +33,14 @@ class MatchEmpezarView(APIView):
             "status": "success",
             "message": "Funcionalidad 'Empezar el match' en construcción. ¡Próximamente conectaremos perfiles compatibles!"
         }, status=status.HTTP_200_OK)
+
+# --- Frontend Views ---
+class InicioView(TemplateView):
+    template_name = 'usuarios/inicio.html'
+
+class LoginFrontendView(TemplateView):
+    template_name = 'usuarios/login.html'
+
+class RegistroFrontendView(TemplateView):
+    template_name = 'usuarios/registro.html'
 

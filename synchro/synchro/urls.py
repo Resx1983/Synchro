@@ -18,10 +18,16 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from usuarios.views import InicioView, LoginFrontendView, RegistroFrontendView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/usuarios/', include('usuarios.urls')),
+    
+    # Frontend Routes
+    path('', InicioView.as_view(), name='inicio_web'),
+    path('login/', LoginFrontendView.as_view(), name='login_web'),
+    path('registro/', RegistroFrontendView.as_view(), name='registro_web'),
 ]
 
 if settings.DEBUG:
