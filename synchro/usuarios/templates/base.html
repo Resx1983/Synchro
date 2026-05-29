@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Synchro{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'usuarios/css/styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'inicio_web' %}" style="text-decoration: none;">
+            <div class="synchro-logo">SYNCHRO<span style="color: var(--accent);">•</span></div>
+        </a>
+        <div class="nav-links" id="navInfo">
+            <!-- Will be populated by JS if logged in -->
+            <a href="{% url 'login_web' %}" class="btn btn-outline" id="btnLoginNav">Iniciar Sesión</a>
+            <a href="{% url 'registro_web' %}" class="btn btn-primary" id="btnRegistroNav">Registrarse</a>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        {% block content %}
+        {% endblock content %}
+    </main>
+
+    <script>
+        // Simple Auth Logic for Navbar
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('access_token');
+            const navInfo = document.getElementById('navInfo');
+            
+            if (token) {
+                // If token exists, display logic for logged in user
+                navInfo.innerHTML = `
+                    <a href="#" style="color: var(--text-main);">Mi Perfil</a>
+                    <a href="#" id="btnLogout" class="btn btn-outline" style="border-color: #ff4d4d; color: #ff4d4d;">Cerrar Sesión</a>
+                `;
+                
+                document.getElementById('btnLogout').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = "{% url 'inicio_web' %}";
+                });
+            }
+        });
+    </script>
+    
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

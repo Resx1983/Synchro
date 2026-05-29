@@ -15,8 +15,25 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from usuarios.views import InicioView, LoginFrontendView, RegistroFrontendView
 
 urlpatterns = [
+    # Panel de administración de Django
     path('admin/', admin.site.urls),
+    
+    # Rutas de la API REST (definidas en usuarios/urls.py)
+    path('api/usuarios/', include('usuarios.urls')),
+    
+    # Rutas del Frontend (Vistas de plantillas HTML)
+    path('', InicioView.as_view(), name='inicio_web'),
+    path('login/', LoginFrontendView.as_view(), name='login_web'),
+    path('registro/', RegistroFrontendView.as_view(), name='registro_web'),
 ]
+
+# Configuración para servir archivos multimedia (fotos de perfil, etc.) en desarrollo
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
