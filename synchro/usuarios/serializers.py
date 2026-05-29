@@ -29,3 +29,4 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
             username=validated_data['email']
         )
         return user
+
