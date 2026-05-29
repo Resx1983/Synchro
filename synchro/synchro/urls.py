@@ -21,15 +21,28 @@ from django.conf.urls.static import static
 from usuarios.views import InicioView, LoginFrontendView, RegistroFrontendView
 
 urlpatterns = [
+    # Panel de administración de Django
     path('admin/', admin.site.urls),
+<<<<<<< HEAD
     path('api/usuarios/', include('usuarios.urls')),
     
     # Frontend Routes
+=======
+    
+    # Rutas de la API REST (definidas en usuarios/urls.py)
+    path('api/usuarios/', include('usuarios.urls')),
+    
+    # Rutas del Frontend (Vistas de plantillas HTML)
+>>>>>>> master
     path('', InicioView.as_view(), name='inicio_web'),
     path('login/', LoginFrontendView.as_view(), name='login_web'),
     path('registro/', RegistroFrontendView.as_view(), name='registro_web'),
 ]
 
+<<<<<<< HEAD
+=======
+# Configuración para servir archivos multimedia (fotos de perfil, etc.) en desarrollo
+>>>>>>> master
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

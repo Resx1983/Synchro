@@ -1,18 +1,32 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+<<<<<<< HEAD
 from .models import (
+=======
+from usuarios.models import (
+>>>>>>> master
     Usuario, IntencionBusqueda, PreguntaEncuesta, 
     RespuestaEncuesta, Match, Mensaje, Sesion
 )
 
 @admin.register(Usuario)
 class CustomUserAdmin(UserAdmin):
+<<<<<<< HEAD
     model = Usuario
     # The fields to be used in displaying the User model
+=======
+    """
+    Personalización del panel de administración para el modelo de Usuario.
+    Permite gestionar los campos personalizados desde la interfaz de Django.
+    """
+    model = Usuario
+    # Campos que se muestran en la lista principal
+>>>>>>> master
     list_display = ['email', 'nombre', 'is_staff', 'is_superuser']
     search_fields = ['email', 'nombre']
     ordering = ['email']
     
+<<<<<<< HEAD
     # Custom fields we added
     fieldsets = UserAdmin.fieldsets + (
         ('Información de Perfil', {'fields': ('nombre', 'fecha_nacimiento', 'ciudad', 'intencion_busqueda', 'genero', 'foto_perfil', 'idioma_preferido', 'tema_preferido', 'bio_ai', 'embedding_perfil')}),
@@ -20,12 +34,33 @@ class CustomUserAdmin(UserAdmin):
 
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('Información Adicional', {
+=======
+    # Agregamos nuestros campos personalizados a los formularios de edición
+    fieldsets = UserAdmin.fieldsets + (
+        ('Información de Perfil Synchro', {
+            'fields': (
+                'nombre', 'fecha_nacimiento', 'ciudad', 
+                'intencion_busqueda', 'genero', 'foto_perfil', 
+                'idioma_preferido', 'tema_preferido', 'bio_ai', 
+                'embedding_perfil'
+            )
+        }),
+    )
+
+    # Campos requeridos al crear un usuario desde el admin
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ('Información Inicial', {
+>>>>>>> master
             'classes': ('wide',),
             'fields': ('email', 'nombre'),
         }),
     )
 
+<<<<<<< HEAD
 # Register the rest of the models simply
+=======
+# Registro básico de los demás modelos para que sean editables en el panel admin
+>>>>>>> master
 admin.site.register(IntencionBusqueda)
 admin.site.register(PreguntaEncuesta)
 admin.site.register(RespuestaEncuesta)

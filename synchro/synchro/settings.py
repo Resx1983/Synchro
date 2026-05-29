@@ -124,15 +124,123 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+<<<<<<< HEAD
 AUTH_USER_MODEL = 'usuarios.Usuario'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+=======
+# Configuración del modelo de usuario personalizado
+# Esto indica a Django que use nuestra clase Usuario en lugar de la básica
+AUTH_USER_MODEL = 'usuarios.Usuario'
+
+# ---------------------------------------------------------------------------
+# Configuración de Django Rest Framework
+#
+# ¿QUÉ ES ESTO?
+# Aquí se le dice a DRF cómo debe autenticar las peticiones a la API.
+# Con esta configuración, TODOS los endpoints protegidos (con IsAuthenticated)
+# requieren un token JWT en el header de la petición HTTP.
+#
+# ¿CÓMO SE USA DESDE EL FRONTEND?
+# En cada petición HTTP que requiera autenticación, se debe enviar el header:
+#   Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOi...
+#
+# Si NO se envía el header → la API responde con 401 Unauthorized
+# Si se envía un token expirado → la API responde con 401 Unauthorized
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        # JWTAuthentication: Verifica que el token del header sea válido
+        # y no haya expirado. Si es válido, asigna el usuario a request.user.
+>>>>>>> master
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
 
+<<<<<<< HEAD
 import os
+=======
+from datetime import timedelta
+
+# ---------------------------------------------------------------------------
+# Configuración de Simple JWT (JSON Web Token)
+#
+# JWT es un estándar de autenticación sin estado (stateless). El servidor
+# genera un token firmado que el frontend guarda (en localStorage, cookies, etc.)
+# y envía en cada petición. El servidor verifica la firma sin consultar la DB.
+#
+# FLUJO DE AUTENTICACIÓN JWT:
+#
+# ┌─────────────────────────────────────────────────────────────────────┐
+# │  1. LOGIN: POST /api/usuarios/login/                               │
+# │     → Enviar: { "email": "...", "password": "..." }                │
+# │     → Recibir: { "access": "eyJ...", "refresh": "eyJ..." }        │
+# │                                                                     │
+# │  2. USAR LA API: Incluir el access token en cada petición          │
+# │     → Header: Authorization: Bearer eyJ...                         │
+# │                                                                     │
+# │  3. TOKEN EXPIRADO (después de 1 día):                             │
+# │     → POST /api/usuarios/login/refresh/                            │
+# │     → Enviar: { "refresh": "eyJ..." }                              │
+# │     → Recibir: { "access": "nuevo_eyJ...", "refresh": "nuevo..." } │
+# │                                                                     │
+# │  4. REFRESH EXPIRADO (después de 7 días):                          │
+# │     → El usuario debe hacer login de nuevo                         │
+# └─────────────────────────────────────────────────────────────────────┘
+# ---------------------------------------------------------------------------
+SIMPLE_JWT = {
+    # Cuánto tiempo dura el token de ACCESO antes de expirar.
+    # Este es el token que se envía en el header Authorization.
+    # Después de 1 día, el frontend debe usar el refresh token para obtener uno nuevo.
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+
+    # Cuánto tiempo dura el token de REFRESCO antes de expirar.
+    # Este token solo se usa para obtener un nuevo access token.
+    # Después de 7 días sin actividad, el usuario debe hacer login de nuevo.
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+
+    # ROTATE_REFRESH_TOKENS = True:
+    # Cada vez que se usa el refresh token, se genera uno NUEVO.
+    # Esto mantiene la sesión "viva" mientras el usuario siga usando la app.
+    # Ejemplo: Si el usuario usa la app todos los días, nunca tendrá que
+    # volver a hacer login porque siempre recibe un refresh token nuevo.
+    'ROTATE_REFRESH_TOKENS': True,
+
+    # BLACKLIST_AFTER_ROTATION = False:
+    # Si fuera True, el refresh token anterior se invalidaría al rotarse.
+    # Con False, los tokens antiguos siguen siendo válidos hasta que expiren.
+    # Nota: Para activar blacklist se necesita agregar 'rest_framework_simplejwt.token_blacklist'
+    # a INSTALLED_APPS y correr las migraciones correspondientes.
+    'BLACKLIST_AFTER_ROTATION': False,
+
+    # ALGORITHM: Algoritmo de encriptación para firmar el token.
+    # HS256 = HMAC con SHA-256 (simétrico, usa la misma clave para firmar y verificar)
+    'ALGORITHM': 'HS256',
+
+    # SIGNING_KEY: La clave secreta usada para firmar los tokens.
+    # Usamos la misma SECRET_KEY de Django. Si alguien obtiene esta clave,
+    # podría generar tokens válidos para cualquier usuario → MANTENERLA SEGURA.
+    'SIGNING_KEY': SECRET_KEY,
+
+    # AUTH_HEADER_TYPES: El prefijo que se usa en el header Authorization.
+    # Con ('Bearer',), el header debe ser: Authorization: Bearer eyJ...
+    # Otros sistemas usan 'Token' o 'JWT' como prefijo.
+    'AUTH_HEADER_TYPES': ('Bearer',),
+
+    # USER_ID_FIELD: El nombre del campo en el modelo Usuario que se usa como ID.
+    # En nuestro caso es 'id_usuario' (no 'id' porque usamos un primary key personalizado).
+    'USER_ID_FIELD': 'id_usuario',
+
+    # USER_ID_CLAIM: El nombre de la clave DENTRO del payload del token JWT.
+    # Al decodificar el token, encontrarás: { "user_id": "1", ... }
+    # SimpleJWT usa este valor para identificar al usuario en cada petición.
+    'USER_ID_CLAIM': 'user_id',
+}
+
+import os
+# Configuración para archivos subidos por el usuario (fotos de perfil, etc.)
+>>>>>>> master
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
