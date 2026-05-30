@@ -5,7 +5,6 @@ import re
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
-from typing import Iterable
 
 from django.db.models import Q
 

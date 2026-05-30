@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="glass-panel auth-card" style="max-width: 760px; width: 100%; text-align: center;">
+    <p class="eyebrow">Chat legado</p>
+    <h1 style="margin-bottom: 1rem;">Esta vista ya usa el chat nuevo</h1>
+    <p class="section-copy" style="margin: 0 auto 1.5rem;">
+        La versión antigua del chat fue reemplazada por una experiencia más estable y ligera.
+        Si quieres seguir conversando, abre el chat actual desde tus matches.
+    </p>
+
+    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'matches_web' %}" class="btn btn-primary">Ir a matches</a>
+        <a href="{% url 'inicio_web' %}" class="btn btn-outline">Volver al inicio</a>
+    </div>
+</div>
+{% endblock %}

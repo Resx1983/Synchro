@@ -1,77 +1,569 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="glass-panel chat-shell" data-match-id="{{ match_id }}">
-    <div class="survey-header">
-        <div>
-            <p class="eyebrow">Chat privado</p>
-            <h1>Conversación del match</h1>
-            <p class="section-copy">Escribe con naturalidad. El chat queda asociado a tu coincidencia actual.</p>
+<div class="chat-page"
+    data-match-id="{{ match_id }}"
+    data-user1-id="{{ match.usuario1.id_usuario }}"
+    data-user1-name="{{ match.usuario1.nombre }}"
+    data-user1-city="{{ match.usuario1.ciudad|default:'' }}"
+    data-user2-id="{{ match.usuario2.id_usuario }}"
+    data-user2-name="{{ match.usuario2.nombre }}"
+    data-user2-city="{{ match.usuario2.ciudad|default:'' }}">
+    <section class="chat-shell">
+        <header class="chat-topbar">
+            <a href="{% url 'matches_web' %}" class="chat-back">←</a>
+            <div class="chat-peer">
+                <div class="chat-avatar"><span>•</span></div>
+                <div class="chat-peer-copy">
+                    <p class="chat-label">Chat privado</p>
+                    <h1 id="chatTitle">Cargando conversación...</h1>
+                    <p id="chatSubtitle">{{ match.explicacion_afinidad|default:"Comparte tus gustos y sigue la conversación." }}</p>
+                </div>
+            </div>
+            <div class="chat-score">
+                <strong>{{ match.compatibilidad|floatformat:0 }}%</strong>
+                <span>Compatibilidad</span>
+            </div>
+        </header>
+
+        <div class="chat-context" id="chatContext">
+            <div><strong>Estado:</strong> {{ match.estado }}</div>
+            <div><strong>Ciudad:</strong> {{ match.usuario1.ciudad|default:"No especificada" }} / {{ match.usuario2.ciudad|default:"No especificada" }}</div>
+            <div><strong>Remitente:</strong> <span id="senderLabel">Tú</span></div>
+            <div><strong>Destinatario:</strong> <span id="recipientLabel">Cargando...</span></div>
         </div>
-        <a href="{% url 'matches_web' %}" class="btn btn-outline">Volver a matches</a>
-    </div>
 
-    <div id="chatState" class="message-box message-success"></div>
-    <div id="chatMessages" class="chat-messages"></div>
+        <div id="chatState" class="chat-state" style="display:none;"></div>
 
-    <form id="chatForm" class="chat-form">
-        <textarea id="chatInput" class="form-control" rows="3" placeholder="Escribe tu mensaje"></textarea>
-        <button type="submit" class="btn btn-accent">Enviar</button>
-    </form>
+        <main id="chatMessages" class="chat-messages">
+            <div class="chat-empty">Cargando conversación...</div>
+        </main>
+
+        <form id="chatForm" class="chat-composer">
+            <textarea id="chatInput" class="chat-input" rows="1" maxlength="500" placeholder="Escribe un mensaje..."></textarea>
+            <div class="chat-composer-actions">
+                <span id="chatCount">0/500</span>
+                <button type="submit" class="chat-send">Enviar</button>
+            </div>
+        </form>
+    </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    const token = localStorage.getItem('access_token');
-    const matchId = document.querySelector('.chat-shell').dataset.matchId;
-    const stateBox = document.getElementById('chatState');
-    const messagesBox = document.getElementById('chatMessages');
-    const chatForm = document.getElementById('chatForm');
-    const chatInput = document.getElementById('chatInput');
-
-    function setState(message, isError = false) {
-        stateBox.style.display = 'block';
-        stateBox.className = isError ? 'message-box message-error' : 'message-box message-success';
-        stateBox.innerText = message;
+<style>
+    .chat-page {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 1.5rem;
     }
 
-    function renderMessages(messages) {
-        if (!messages.length) {
-            messagesBox.innerHTML = '<div class="empty-state">Aún no hay mensajes. Envía el primero.</div>';
+    .chat-shell {
+        width: min(1100px, 100%);
+        min-height: calc(100vh - 3rem);
+        display: flex;
+        flex-direction: column;
+        background: rgba(12, 8, 28, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    .chat-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chat-back {
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        text-decoration: none;
+        color: white;
+        border: 1px solid rgba(178, 75, 243, 0.45);
+        background: rgba(178, 75, 243, 0.12);
+        flex-shrink: 0;
+    }
+
+    .chat-peer {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .chat-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .chat-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .chat-peer-copy {
+        min-width: 0;
+    }
+
+    .chat-label {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.72rem;
+        color: var(--accent);
+        margin-bottom: 0.35rem;
+    }
+
+    #chatTitle {
+        margin: 0;
+        font-size: 1.45rem;
+        color: white;
+    }
+
+    #chatSubtitle {
+        margin: 0.35rem 0 0;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    .chat-score {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 96px;
+        padding: 0.75rem 0.9rem;
+        border-radius: 20px;
+        background: rgba(178, 75, 243, 0.12);
+        border: 1px solid rgba(178, 75, 243, 0.22);
+        color: white;
+    }
+
+    .chat-score strong {
+        font-size: 1.3rem;
+    }
+
+    .chat-score span {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    .chat-context {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        color: var(--text-muted);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .chat-context strong {
+        color: white;
+    }
+
+    .chat-state {
+        margin: 1rem 1.25rem 0;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chat-messages {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        padding: 1.25rem;
+        overflow-y: auto;
+        background:
+            radial-gradient(circle at top left, rgba(178, 75, 243, 0.10), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(255, 215, 0, 0.07), transparent 28%);
+    }
+
+    .chat-empty {
+        margin: auto;
+        color: var(--text-muted);
+        text-align: center;
+        padding: 2rem;
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .chat-message {
+        width: fit-content;
+        max-width: min(68%, 620px);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 0.9rem 1rem;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+    }
+
+    .chat-message.mine {
+        margin-left: auto;
+        background: linear-gradient(135deg, rgba(178, 75, 243, 0.95), rgba(118, 32, 212, 0.95));
+        border-bottom-right-radius: 6px;
+    }
+
+    .chat-message.other {
+        margin-right: auto;
+        background: rgba(255, 255, 255, 0.06);
+        border-bottom-left-radius: 6px;
+    }
+
+    .message-owner {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: rgba(255, 255, 255, 0.72);
+    }
+
+    .chat-message.other .message-owner {
+        color: var(--accent);
+    }
+
+    .message-text {
+        color: white;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .message-time {
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.72);
+    }
+
+    .chat-message.other .message-time {
+        color: var(--text-muted);
+    }
+
+    .chat-composer {
+        padding: 1rem 1.25rem 1.25rem;
+        background: rgba(255, 255, 255, 0.04);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chat-input {
+        width: 100%;
+        min-height: 62px;
+        resize: vertical;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.22);
+        color: white;
+        font-family: inherit;
+    }
+
+    .chat-input:focus {
+        outline: none;
+        border-color: rgba(178, 75, 243, 0.7);
+        box-shadow: 0 0 0 3px rgba(178, 75, 243, 0.18);
+    }
+
+    .chat-composer-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.9rem;
+        margin-top: 0.7rem;
+    }
+
+    #chatCount {
+        color: var(--text-muted);
+        font-size: 0.86rem;
+    }
+
+    .chat-send {
+        min-width: 120px;
+        padding: 0.9rem 1.3rem;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), #ffd94d);
+        color: #140a1f;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(255, 215, 0, 0.22);
+    }
+
+    @media (max-width: 900px) {
+        .chat-context {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .chat-message {
+            max-width: 84%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .chat-page {
+            padding: 0.75rem;
+        }
+
+        .chat-shell {
+            min-height: calc(100vh - 1.5rem);
+            border-radius: 22px;
+        }
+
+        .chat-topbar {
+            flex-wrap: wrap;
+        }
+
+        .chat-score {
+            width: 100%;
+        }
+
+        .chat-context {
+            grid-template-columns: 1fr;
+        }
+
+        .chat-message {
+            max-width: 100%;
+        }
+
+        .chat-composer-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .chat-send {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    const chatPage = document.querySelector('.chat-page');
+    const matchId = chatPage.dataset.matchId;
+    const token = localStorage.getItem('access_token');
+    const tokenPayload = token ? decodeTokenPayload(token) : {};
+    const currentUserId = Number(tokenPayload.user_id || 0);
+    const user1 = {
+        id: Number(chatPage.dataset.user1Id),
+        name: chatPage.dataset.user1Name,
+        city: chatPage.dataset.user1City || ''
+    };
+    const user2 = {
+        id: Number(chatPage.dataset.user2Id),
+        name: chatPage.dataset.user2Name,
+        city: chatPage.dataset.user2City || ''
+    };
+    const chatState = document.getElementById('chatState');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatCount = document.getElementById('chatCount');
+    const senderLabel = document.getElementById('senderLabel');
+    const recipientLabel = document.getElementById('recipientLabel');
+    const chatTitleElement = document.getElementById('chatTitle');
+    const chatSubtitleElement = document.getElementById('chatSubtitle');
+
+    function decodeTokenPayload(jwtToken) {
+        try {
+            const payload = jwtToken.split('.')[1];
+            const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+            const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+            return JSON.parse(atob(normalized + padding));
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function getPeer() {
+        return currentUserId === user1.id ? user2 : user1;
+    }
+
+    function getSelf() {
+        return currentUserId === user1.id ? user1 : user2;
+    }
+
+    function isTokenUsable() {
+        return Boolean(token && currentUserId > 0 && tokenPayload.token_type === 'access');
+    }
+
+    let latestMessageId = 0;
+    let pollingTimer = null;
+
+    function showState(message, isError = false) {
+        chatState.style.display = 'block';
+        chatState.className = isError ? 'chat-state message-box message-error' : 'chat-state message-box message-success';
+        chatState.innerText = message;
+    }
+
+    function hideState() {
+        chatState.style.display = 'none';
+        chatState.innerText = '';
+    }
+
+    function formatTime(value) {
+        try {
+            return new Date(value).toLocaleString('es-ES', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            });
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    }
+
+    function refreshParticipantLabels() {
+        const self = getSelf();
+        const peer = getPeer();
+
+        if (senderLabel) {
+            senderLabel.innerText = self.name || 'Tú';
+        }
+        if (recipientLabel) {
+            recipientLabel.innerText = peer.name || 'Destinatario';
+        }
+        chatTitleElement.innerText = peer.name ? `Chat con ${peer.name}` : 'Chat privado';
+        chatSubtitleElement.innerText = 'Conversación privada sobre gustos y afinidad.';
+
+        const contextNodes = document.querySelectorAll('.chat-context > div');
+        if (contextNodes.length >= 2) {
+            contextNodes[1].innerHTML = `<strong>Ciudad:</strong> ${escapeHtml(peer.city || 'No especificada')}`;
+        }
+    }
+
+    function buildMessage(message) {
+        const mine = Number(message.remitente) === currentUserId;
+        const senderName = message.remitente_nombre || (mine ? getSelf().name : getPeer().name) || 'Remitente';
+        const recipientName = message.destinatario_nombre || (mine ? getPeer().name : getSelf().name) || 'Destinatario';
+
+        const wrapper = document.createElement('article');
+        wrapper.className = `chat-message ${mine ? 'mine' : 'other'}`;
+        wrapper.dataset.messageId = String(message.id_mensaje);
+        wrapper.innerHTML = `
+            <div class="message-owner">${escapeHtml(senderName)} → ${escapeHtml(recipientName)}</div>
+            <div class="message-text">${escapeHtml(message.mensaje)}</div>
+            <div class="message-time">${formatTime(message.fecha_mensaje)}</div>
+        `;
+        return wrapper;
+    }
+
+    function appendMessages(messages, replace = false) {
+        if (replace) {
+            chatMessages.innerHTML = '';
+        }
+
+        if (!messages.length && replace) {
+            chatMessages.innerHTML = '<div class="chat-empty">No hay mensajes todavía. Escribe el primero.</div>';
+            latestMessageId = 0;
             return;
         }
 
-        messagesBox.innerHTML = messages.map(message => {
-            return `
-                <div class="chat-message theirs">
-                    <p>${message.mensaje}</p>
-                    <span>${new Date(message.fecha_mensaje).toLocaleString()}</span>
-                </div>
-            `;
-        }).join('');
+        if (replace && !messages.length) {
+            return;
+        }
+
+        for (const message of messages) {
+            const messageId = Number(message.id_mensaje);
+            if (messageId <= latestMessageId) {
+                continue;
+            }
+            chatMessages.appendChild(buildMessage(message));
+            latestMessageId = Math.max(latestMessageId, messageId);
+        }
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    async function loadMessages() {
-        if (!token) {
+    async function fetchJson(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (error) {
+            data = {};
+        }
+        if (!response.ok) {
+            const detail = data.detail || 'La petición no pudo completarse.';
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                window.location.href = "{% url 'login_web' %}";
+                throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+            }
+            throw new Error(detail);
+        }
+        return data;
+    }
+
+    async function loadMessages(initial = false) {
+        const url = initial || latestMessageId === 0
+            ? `/api/usuarios/matches/${matchId}/mensajes/`
+            : `/api/usuarios/matches/${matchId}/mensajes/?after_id=${latestMessageId}`;
+        const data = await fetchJson(url);
+        appendMessages(data.mensajes || [], initial || latestMessageId === 0);
+        hideState();
+    }
+
+    async function bootstrapChat() {
+        if (!isTokenUsable()) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
             window.location.href = "{% url 'login_web' %}";
             return;
         }
 
         try {
-            const response = await fetch(`/api/usuarios/matches/${matchId}/mensajes/`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.detail || 'No se pudieron cargar los mensajes.');
+            refreshParticipantLabels();
+            await loadMessages(true);
+            if (pollingTimer) {
+                clearInterval(pollingTimer);
             }
-            renderMessages(data.mensajes || []);
-            setState('Chat listo para conversar.');
+            pollingTimer = setInterval(() => loadMessages(false).catch(() => {}), 3000);
         } catch (error) {
-            setState(error.message, true);
+            showState(error.message, true);
+            chatMessages.innerHTML = '<div class="chat-empty">No se pudo cargar el chat.</div>';
         }
     }
+
+    function updateCount() {
+        chatCount.innerText = `${chatInput.value.length}/500`;
+    }
+
+    chatInput.addEventListener('input', updateCount);
 
     chatForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -94,12 +586,15 @@
                 throw new Error(data.detail || 'No se pudo enviar el mensaje.');
             }
             chatInput.value = '';
-            await loadMessages();
+            updateCount();
+            appendMessages([data], false);
+            hideState();
         } catch (error) {
-            setState(error.message, true);
+            showState(error.message, true);
         }
     });
 
-    loadMessages();
+    updateCount();
+    bootstrapChat();
 </script>
 {% endblock %}

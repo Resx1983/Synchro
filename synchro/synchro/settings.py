@@ -70,6 +70,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'synchro.wsgi.application'
+ASGI_APPLICATION = 'synchro.asgi.application'
+
 
 
 # Database

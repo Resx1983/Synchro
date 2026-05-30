@@ -150,7 +150,7 @@ class MatchListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        matches = user_matches(request.user)
+        matches = user_matches(request.user).select_related('usuario1', 'usuario2')
         serializer = MatchSerializer(matches, many=True, context={'request': request})
         return Response({'matches': serializer.data})
 
@@ -159,7 +159,16 @@ class MatchDetailView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get_match(self, match_id, user):
-        return get_object_or_404(Match.objects.select_related('usuario1', 'usuario2'), pk=match_id)
+        return get_object_or_404(
+            Match.objects.select_related('usuario1', 'usuario2').only(
+                'id_match', 'usuario1_id', 'usuario2_id', 'compatibilidad',
+                'explicacion_afinidad', 'fecha_match', 'fecha_actualizacion',
+                'sugerencia_ia', 'estado', 'usuario1__nombre', 'usuario1__ciudad',
+                'usuario1__foto_perfil', 'usuario2__nombre', 'usuario2__ciudad',
+                'usuario2__foto_perfil'
+            ),
+            pk=match_id,
+        )
 
     def get(self, request, match_id):
         match = self.get_match(match_id, request.user)
@@ -179,7 +188,13 @@ class MensajesMatchView(APIView):
         match = self.get_match(match_id)
         if request.user not in (match.usuario1, match.usuario2):
             return Response({'detail': 'No tienes acceso a este chat.'}, status=status.HTTP_403_FORBIDDEN)
-        mensajes = Mensaje.objects.filter(match=match).select_related('remitente', 'destinatario').order_by('fecha_mensaje')
+        after_id = request.query_params.get('after_id')
+        mensajes = Mensaje.objects.filter(match=match).select_related('remitente', 'destinatario').only(
+            'id_mensaje', 'match_id', 'remitente_id', 'destinatario_id', 'mensaje', 'fecha_mensaje', 'tipo_mensaje', 'estado_leido',
+            'remitente__id_usuario', 'remitente__nombre', 'destinatario__id_usuario', 'destinatario__nombre',
+        ).order_by('fecha_mensaje')
+        if after_id and after_id.isdigit():
+            mensajes = mensajes.filter(id_mensaje__gt=int(after_id))
         serializer = MensajeSerializer(mensajes, many=True)
         return Response({'match_id': match.id_match, 'mensajes': serializer.data})
 
@@ -228,6 +243,16 @@ class ChatFrontendView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['match_id'] = kwargs.get('match_id')
+        match = get_object_or_404(
+            Match.objects.select_related('usuario1', 'usuario2').only(
+                'id_match', 'usuario1_id', 'usuario2_id', 'compatibilidad', 'explicacion_afinidad',
+                'estado', 'usuario1__nombre', 'usuario1__ciudad', 'usuario1__foto_perfil',
+                'usuario2__nombre', 'usuario2__ciudad', 'usuario2__foto_perfil'
+            ),
+            pk=kwargs.get('match_id')
+        )
+        context['match_id'] = match.id_match
+        context['match'] = match
+        context['otro_usuario'] = match.usuario2 if self.request.user == match.usuario1 else match.usuario1
         return context
 
