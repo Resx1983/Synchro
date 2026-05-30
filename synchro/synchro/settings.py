@@ -132,6 +132,11 @@ REST_FRAMEWORK = {
     )
 }
 
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'id_usuario',
+    'USER_ID_CLAIM': 'user_id',
+}
+
 import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

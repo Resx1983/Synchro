@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="glass-panel matches-shell">
+    <div class="survey-header">
+        <div>
+            <p class="eyebrow">Coincidencias</p>
+            <h1>Personas compatibles contigo</h1>
+            <p class="section-copy">Aquí verás los matches generados por el sistema y podrás abrir el chat con cada persona.</p>
+        </div>
+        <a href="{% url 'encuesta_web' %}" class="btn btn-outline">Volver a la encuesta</a>
+    </div>
+
+    <div id="matchesState" class="message-box message-success"></div>
+    <div id="matchesGrid" class="matches-grid"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const token = localStorage.getItem('access_token');
+    const stateBox = document.getElementById('matchesState');
+    const grid = document.getElementById('matchesGrid');
+
+    function setState(message, isError = false) {
+        stateBox.style.display = 'block';
+        stateBox.className = isError ? 'message-box message-error' : 'message-box message-success';
+        stateBox.innerText = message;
+    }
+
+    async function loadMatches() {
+        if (!token) {
+            window.location.href = "{% url 'login_web' %}";
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/usuarios/matches/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudieron cargar los matches.');
+            }
+
+            const matches = data.matches || [];
+            if (!matches.length) {
+                grid.innerHTML = '<div class="empty-state">Aún no tienes matches. Completa la encuesta y genera tu primera coincidencia.</div>';
+                setState('Todavía no hay matches disponibles.');
+                return;
+            }
+
+            stateBox.style.display = 'none';
+            grid.innerHTML = matches.map(match => {
+                const other = match.otro_usuario || {};
+                return `
+                    <article class="match-card">
+                        <div class="match-card-top">
+                            <div>
+                                <p class="match-score">${match.compatibilidad}%</p>
+                                <h3>${other.nombre || 'Sin nombre'}</h3>
+                                <p>${other.ciudad || 'Ciudad no definida'}</p>
+                            </div>
+                            <span class="match-badge">${match.estado}</span>
+                        </div>
+                        <p class="match-explanation">${match.explicacion_afinidad || 'Compatibilidad generada por el sistema.'}</p>
+                        <div class="match-actions">
+                            <a href="/api/usuarios/frontend/chat/${match.id_match}/" class="btn btn-primary">Abrir chat</a>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        } catch (error) {
+            setState(error.message, true);
+        }
+    }
+
+    loadMatches();
+</script>
+{% endblock %}

@@ -39,7 +39,8 @@
             if (token) {
                 // If token exists, display logic for logged in user
                 navInfo.innerHTML = `
-                    <a href="#" style="color: var(--text-main);">Mi Perfil</a>
+                    <a href="{% url 'encuesta_web' %}" style="color: var(--text-main);">Encuesta</a>
+                    <a href="{% url 'matches_web' %}" style="color: var(--text-main);">Matches</a>
                     <a href="#" id="btnLogout" class="btn btn-outline" style="border-color: #ff4d4d; color: #ff4d4d;">Cerrar Sesión</a>
                 `;
                 

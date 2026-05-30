@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="glass-panel survey-shell">
+    <div class="survey-header">
+        <div>
+            <p class="eyebrow">Perfil inteligente</p>
+            <h1>Completa tu encuesta</h1>
+            <p class="section-copy">Tus respuestas alimentan el sistema de compatibilidad y ayudan a encontrar personas con gustos reales en común.</p>
+        </div>
+        <div class="survey-actions">
+            <button id="btnGuardarEncuesta" class="btn btn-accent">Guardar respuestas</button>
+            <button id="btnGenerarMatch" class="btn btn-primary">Buscar match</button>
+        </div>
+    </div>
+
+    <div id="surveyStatus" class="message-box message-success"></div>
+    <div id="surveyError" class="message-box message-error"></div>
+
+    <form id="surveyForm" class="survey-form"></form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const token = localStorage.getItem('access_token');
+    const form = document.getElementById('surveyForm');
+    const statusBox = document.getElementById('surveyStatus');
+    const errorBox = document.getElementById('surveyError');
+    const saveButton = document.getElementById('btnGuardarEncuesta');
+    const matchButton = document.getElementById('btnGenerarMatch');
+
+    function showMessage(element, text, isError = false) {
+        element.style.display = 'block';
+        element.className = isError ? 'message-box message-error' : 'message-box message-success';
+        element.innerHTML = text;
+    }
+
+    function hideMessages() {
+        statusBox.style.display = 'none';
+        errorBox.style.display = 'none';
+    }
+
+    async function loadSurvey() {
+        if (!token) {
+            window.location.href = "{% url 'login_web' %}";
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/usuarios/preguntas/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudieron cargar las preguntas.');
+            }
+
+            const respuestas = new Map((data.respuestas || []).map(item => [String(item.pregunta_id || item.pregunta), item.respuesta_texto]));
+
+            form.innerHTML = (data.preguntas || []).map((pregunta, index) => {
+                const value = respuestas.get(String(pregunta.id_pregunta)) || '';
+                return `
+                    <div class="survey-card">
+                        <div class="survey-card-head">
+                            <span class="survey-index">${index + 1}</span>
+                            <div>
+                                <h3>${pregunta.texto_pregunta}</h3>
+                                <p>Responde con la mayor honestidad posible.</p>
+                            </div>
+                        </div>
+                        <textarea class="form-control survey-input" name="pregunta_${pregunta.id_pregunta}" rows="3" placeholder="Escribe tu respuesta">${value}</textarea>
+                    </div>
+                `;
+            }).join('');
+
+            if (!(data.preguntas || []).length) {
+                form.innerHTML = '<div class="message-box message-error" style="display:block;">Todavía no hay preguntas cargadas en la base de datos.</div>';
+            }
+        } catch (error) {
+            showMessage(errorBox, error.message, true);
+        }
+    }
+
+    async function saveSurvey() {
+        hideMessages();
+        const inputs = Array.from(form.querySelectorAll('textarea[name^="pregunta_"]'));
+        const respuestas = inputs.map(input => ({
+            pregunta_id: Number(input.name.replace('pregunta_', '')),
+            respuesta_texto: input.value.trim()
+        })).filter(item => item.respuesta_texto.length > 0);
+
+        if (!respuestas.length) {
+            showMessage(errorBox, 'Completa al menos una respuesta antes de guardar.', true);
+            return;
+        }
+
+        saveButton.disabled = true;
+        saveButton.innerText = 'Guardando...';
+
+        try {
+            const response = await fetch('/api/usuarios/respuestas/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ respuestas })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudo guardar la encuesta.');
+            }
+            showMessage(statusBox, `${data.message} Se procesaron ${data.respuestas_guardadas} respuestas.`);
+        } catch (error) {
+            showMessage(errorBox, error.message, true);
+        } finally {
+            saveButton.disabled = false;
+            saveButton.innerText = 'Guardar respuestas';
+        }
+    }
+
+    async function generateMatch() {
+        hideMessages();
+        matchButton.disabled = true;
+        matchButton.innerText = 'Buscando...';
+
+        try {
+            const response = await fetch('/api/usuarios/empezar-match/', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudo generar el match.');
+            }
+            const match = data.match || {};
+            showMessage(statusBox, `Match generado con ${match.otro_usuario?.nombre || 'otro usuario'}: ${match.compatibilidad}% de compatibilidad.`);
+        } catch (error) {
+            showMessage(errorBox, error.message, true);
+        } finally {
+            matchButton.disabled = false;
+            matchButton.innerText = 'Buscar match';
+        }
+    }
+
+    saveButton.addEventListener('click', saveSurvey);
+    matchButton.addEventListener('click', generateMatch);
+    loadSurvey();
+</script>
+{% endblock %}

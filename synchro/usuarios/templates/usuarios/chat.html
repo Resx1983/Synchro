@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="glass-panel chat-shell" data-match-id="{{ match_id }}">
+    <div class="survey-header">
+        <div>
+            <p class="eyebrow">Chat privado</p>
+            <h1>Conversación del match</h1>
+            <p class="section-copy">Escribe con naturalidad. El chat queda asociado a tu coincidencia actual.</p>
+        </div>
+        <a href="{% url 'matches_web' %}" class="btn btn-outline">Volver a matches</a>
+    </div>
+
+    <div id="chatState" class="message-box message-success"></div>
+    <div id="chatMessages" class="chat-messages"></div>
+
+    <form id="chatForm" class="chat-form">
+        <textarea id="chatInput" class="form-control" rows="3" placeholder="Escribe tu mensaje"></textarea>
+        <button type="submit" class="btn btn-accent">Enviar</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const token = localStorage.getItem('access_token');
+    const matchId = document.querySelector('.chat-shell').dataset.matchId;
+    const stateBox = document.getElementById('chatState');
+    const messagesBox = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+
+    function setState(message, isError = false) {
+        stateBox.style.display = 'block';
+        stateBox.className = isError ? 'message-box message-error' : 'message-box message-success';
+        stateBox.innerText = message;
+    }
+
+    function renderMessages(messages) {
+        if (!messages.length) {
+            messagesBox.innerHTML = '<div class="empty-state">Aún no hay mensajes. Envía el primero.</div>';
+            return;
+        }
+
+        messagesBox.innerHTML = messages.map(message => {
+            return `
+                <div class="chat-message theirs">
+                    <p>${message.mensaje}</p>
+                    <span>${new Date(message.fecha_mensaje).toLocaleString()}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadMessages() {
+        if (!token) {
+            window.location.href = "{% url 'login_web' %}";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/usuarios/matches/${matchId}/mensajes/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudieron cargar los mensajes.');
+            }
+            renderMessages(data.mensajes || []);
+            setState('Chat listo para conversar.');
+        } catch (error) {
+            setState(error.message, true);
+        }
+    }
+
+    chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/usuarios/matches/${matchId}/mensajes/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ mensaje: message })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'No se pudo enviar el mensaje.');
+            }
+            chatInput.value = '';
+            await loadMessages();
+        } catch (error) {
+            setState(error.message, true);
+        }
+    });
+
+    loadMessages();
+</script>
+{% endblock %}

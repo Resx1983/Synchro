@@ -13,6 +13,40 @@
             <input type="text" id="nombre" class="form-control" required placeholder="Ej. Alex">
         </div>
         <div class="form-group">
+            <label for="ciudad">Ciudad</label>
+            <input type="text" id="ciudad" class="form-control" placeholder="Ej. Lima">
+        </div>
+        <div class="form-group">
+            <label for="genero">Género</label>
+            <select id="genero" class="form-control">
+                <option value="">Selecciona una opción</option>
+                <option value="Mujer">Mujer</option>
+                <option value="Hombre">Hombre</option>
+                <option value="No binario">No binario</option>
+                <option value="Prefiero no decir">Prefiero no decir</option>
+                <option value="Otro">Otro</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="fecha_nacimiento">Fecha de nacimiento</label>
+            <input type="date" id="fecha_nacimiento" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="intencion_busqueda">¿Qué buscas?</label>
+            <select id="intencion_busqueda" class="form-control">
+                <option value="">Selecciona una opción</option>
+                {% for intencion in intenciones %}
+                    <option value="{{ intencion.id_intencion }}">{{ intencion.nombre }}</option>
+                {% empty %}
+                    <option value="">Conocer personas</option>
+                    <option value="">Amistad</option>
+                    <option value="">Pareja</option>
+                    <option value="">Ambos</option>
+                {% endfor %}
+            </select>
+            <small style="display:block; margin-top:0.5rem; color: var(--text-muted);">Si todavía no se cargaron datos en la base, puedes completar el registro y después elegir tu intención real desde la encuesta.</small>
+        </div>
+        <div class="form-group">
             <label for="email">Correo Electrónico</label>
             <input type="email" id="email" class="form-control" required placeholder="tu@email.com">
         </div>
@@ -35,6 +69,10 @@
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const nombre = document.getElementById('nombre').value;
+        const ciudad = document.getElementById('ciudad').value;
+        const genero = document.getElementById('genero').value;
+        const fecha_nacimiento = document.getElementById('fecha_nacimiento').value;
+        const intencion_busqueda = document.getElementById('intencion_busqueda').value;
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         
@@ -54,18 +92,23 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ nombre, email, password })
+                body: JSON.stringify({
+                    nombre,
+                    ciudad,
+                    genero,
+                    fecha_nacimiento: fecha_nacimiento || null,
+                    intencion_busqueda: intencion_busqueda || null,
+                    email,
+                    password
+                })
             });
 
             const data = await response.json();
 
             if (response.ok || response.status === 201) {
-                // If success, log them in automatically or redirect to login.
                 successBox.style.display = 'block';
-                successBox.innerText = '¡Cuenta creada! Redirigiendo...';
+                successBox.innerText = '¡Cuenta creada! Ahora completa tu encuesta para recibir matches.';
                 
-                // Optional: Automatically login via JS by calling the login endpoint immediately 
-                // but let's just do a redirect for simplicity.
                 setTimeout(() => {
                     window.location.href = "{% url 'login_web' %}";
                 }, 1500);
